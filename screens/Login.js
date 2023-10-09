@@ -1,15 +1,15 @@
 import * as React from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import Separator from '../components/Separator';
 
-export default function Login({ navigation, route }) {
+export default function Login({ navigation }) {
   const [registeredState, setRegisteredState] = React.useState({
     name: '',
     phone: '',
     email: '',
     password: '',
   });
+
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [haveAccount, setHaveAccount] = React.useState(false);
@@ -17,34 +17,13 @@ export default function Login({ navigation, route }) {
   async function getUserData() {
     let userData = await SecureStore.getItemAsync('userData');
     if (userData) {
-      const userDataObject = JSON.parse(userData);
-      setEmail(userDataObject.email);
-      setRegisteredState({ ...userDataObject });
+      const parsedUserData = JSON.parse(userData);
+      setEmail(parsedUserData.email);
+      setRegisteredState(parsedUserData);
       setHaveAccount(true);
     } else {
       setHaveAccount(false);
     }
-  }
-
-  async function handleDeleteRegister() {
-    Alert.alert(
-      'Confirm Deletion',
-      'Are you sure you want to delete your account?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            await SecureStore.deleteItemAsync('userData');
-            // Add any additional cleanup or navigation logic here if needed.
-          },
-          style: 'destructive',
-        },
-      ]
-    );
   }
 
   React.useEffect(() => {
@@ -55,25 +34,38 @@ export default function Login({ navigation, route }) {
     });
 
     return () => {
-      unsubscribe.remove();
+      unsubscribe;
     };
   }, [navigation]);
 
   function handleLogin() {
-    if (email === registeredState.email && password === registeredState.password) {
-      setPassword('');
-      navigation.replace('Home', { name: registeredState.name });
+    if (email.length !== 0 && password.length !== 0) {
+      if (email === registeredState.email && password === registeredState.password) {
+        setPassword('');
+        navigation.replace('Home', { name: registeredState.name });
+      } else {
+        Alert.alert('Erro ao tentar efetuar o login:', 'E-mail ou senha incorretos!');
+      }
     } else {
-      Alert.alert(
-        'Erro ao tentar efetuar o login: ',
-        'Informe o e-mail e a senha corretos!'
-      );
+      Alert.alert('Erro ao tentar efetuar o login:', 'Informe o e-mail e a senha corretos!');
     }
   }
 
   function handleRegister() {
     setEmail('');
     setPassword('');
+    navigation.navigate('Register');
+  }
+
+  async function handleDeleteRegister() {
+    await SecureStore.deleteItemAsync('userData');
+    setRegisteredState({
+      name: '',
+      phone: '',
+      email: '',
+      password: '',
+    });
+    // After deleting, navigate to the Register screen
     navigation.navigate('Register');
   }
 
@@ -101,7 +93,6 @@ export default function Login({ navigation, route }) {
         <Text style={styles.loginButtonText}>Entrar</Text>
       </TouchableOpacity>
 
-      <Separator marginVertical={10} key="separator1" />
       {!haveAccount ? (
         <>
           <Text style={styles.textSimple}>É a primeira vez aqui e ainda não se cadastrou?</Text>
@@ -115,24 +106,20 @@ export default function Login({ navigation, route }) {
           <TouchableOpacity
             style={styles.button}
             onPress={() =>
-              Alert.alert(
-                'Informação: ',
-                `A sua senha foi enviada para o email cadastrado: ${registeredState.email} ${registeredState.password}`
-              )
-            }
-          >
+              Alert.alert('Informação:', `A sua senha foi enviada para o email cadastrado: ${registeredState.email} ${registeredState.password}`)
+            }>
             <Text style={styles.buttonText}>Esqueci minha senha</Text>
+          </TouchableOpacity>
+          {/* Modify the "Deletar Chave" button */}
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteRegister}>
+            <Text style={styles.deleteButtonText}>Deletar Chave</Text>
           </TouchableOpacity>
         </>
       )}
-      <Separator marginVertical={30} />
-      <Text style={styles.textSimpleJustify}>
-        Este aplicativo faz uso de armazenamento local com SecureStore e fará também com AsyncStorage
-      </Text>
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleDeleteRegister}>
-        <Text style={styles.saveButtonText}>Deletar chave</Text>
-      </TouchableOpacity>
+      <Text style={styles.textSimpleJustify}>
+        Este aplicativo faz uso de armazenamento local com SecureStore e fará também com AsyncStorage.
+      </Text>
     </View>
   );
 }
@@ -191,14 +178,17 @@ const styles = StyleSheet.create({
     width: '95%',
     textAlign: 'justify',
   },
-  saveButton: {
-    backgroundColor: '#E37D00',
-    padding: 5,
+  // Add styles for the Delete Button
+  deleteButton: {
+    backgroundColor: 'red',
+    padding: 10,
     borderRadius: 5,
+    marginTop: 10,
   },
-  saveButtonText: {
+  deleteButtonText: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#730000',
+    color: '#FFFFFF',
     textAlign: 'center',
   },
 });
